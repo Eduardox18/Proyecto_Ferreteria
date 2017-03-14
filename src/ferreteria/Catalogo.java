@@ -2,9 +2,15 @@ package ferreteria;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import static javax.print.attribute.Size2DSyntax.MM;
 
 /**
  *
@@ -12,11 +18,12 @@ import java.util.Comparator;
  * La siguiente clase contiene los métodos principales del programa, así como el arreglo principal.
  */
 public class Catalogo {
-
-  ArrayList<Articulo> articulos = new ArrayList();
-  double gananciasFerreteria;
+  
   EscrituraYLectura eyl = new EscrituraYLectura();
   Teclado tec = new Teclado();
+  ArrayList<Articulo> articulos = new ArrayList();
+  ArrayList<Factura> facturas = new ArrayList();
+  double gananciasFerreteria;
   int clave = 1701000;
   int contador;
 
@@ -56,12 +63,12 @@ public class Catalogo {
       Articulo art = new Articulo(clave, nombre, descripcion, precio_compra, precio_venta,
           precio_iva, existencia, tipo_de_unidad);
       articulos.add(art);
-      eyl.escribir(articulos);
+      eyl.escribirArticulos(articulos);
     } else {
       Articulo art = new Articulo(clave, nombre, descripcion, precio_compra, precio_venta,
           precio_iva, existencia, tipo_de_unidad);
       articulos.add(art);
-      eyl.escribir(articulos);
+      eyl.escribirArticulos(articulos);
     }
 
   }
@@ -75,10 +82,10 @@ public class Catalogo {
   public void eliminar() throws ClassNotFoundException, IOException {
     boolean flag = false;
     System.out.println("Lista de artículos en el sistema: ");
-    eyl.mostrar();
+    eyl.mostrarArticulos();
     System.out.println("Introduzca la clave del artículo que desea eliminar: ");
     int celim = tec.leerEntero();
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     for (int i = 0; i < articulos.size(); i++) {
       if (articulos.get(i).getClave() == celim) {
         articulos.remove(i);
@@ -90,7 +97,7 @@ public class Catalogo {
     } else {
       System.out.println("No se encontró el artículo");
     }
-    eyl.escribir(articulos);
+    eyl.escribirArticulos(articulos);
   }
 
   /**
@@ -102,10 +109,10 @@ public class Catalogo {
   public void editarArticulo() throws ClassNotFoundException, IOException {
     boolean flag = false;
     System.out.println("Lista de artículos en el sistema: ");
-    eyl.mostrar();
+    eyl.mostrarArticulos();
     System.out.println("Introduzca la clave del artículo que desea editar: ");
     int celim = tec.leerEntero();
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     for (int i = 0; i < articulos.size(); i++) {
       if (articulos.get(i).getClave() == celim) {
         System.out.println("¿Qué desea editar?\n1.Nombre\n2.Descripción\n3.Precio compra"
@@ -151,7 +158,7 @@ public class Catalogo {
     if (flag == false) {
       System.out.println("No se encontró el artículo");
     } 
-    eyl.escribir(articulos);
+    eyl.escribirArticulos(articulos);
   }
 
   /**
@@ -163,7 +170,7 @@ public class Catalogo {
    */
   public void buscarString(String busca) throws ClassNotFoundException, IOException {
     boolean flag = false;
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     System.out.println("Resultados de la búsqueda: ");
     for (int i = 0; i < articulos.size(); i++) {
       if (articulos.get(i).getNombre().equalsIgnoreCase(busca)
@@ -193,7 +200,7 @@ public class Catalogo {
    */
   public void buscarEntero(int busca) throws ClassNotFoundException, IOException {
     boolean flag = false;
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     System.out.println("Resultados de la búsqueda: ");
     for (int i = 0; i < articulos.size(); i++) {
       if (articulos.get(i).getClave() == busca) {
@@ -221,7 +228,7 @@ public class Catalogo {
    * @throws IOException
    */
   public void ordenarNombre() throws ClassNotFoundException, IOException {
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     Collections.sort(articulos, new Comparator<Articulo>() {
       @Override
       public int compare(Articulo a1, Articulo a2) {
@@ -249,7 +256,7 @@ public class Catalogo {
    * @throws IOException
    */
   public void ordenarClave() throws ClassNotFoundException, IOException {
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     Collections.sort(articulos, new Comparator<Articulo>() {
       @Override
       public int compare(Articulo a1, Articulo a2) {
@@ -277,7 +284,7 @@ public class Catalogo {
    * @throws IOException
    */
   public void ordenarPrecioAscendente() throws ClassNotFoundException, IOException {
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     Collections.sort(articulos, new Comparator<Articulo>() {
       @Override
       public int compare(Articulo a1, Articulo a2) {
@@ -299,16 +306,17 @@ public class Catalogo {
   
   /**
    * Este método calcula el valor total de los artículos disponibles en el inventario
+     * @return Precio total de artículos
    * @throws ClassNotFoundException
    * @throws IOException 
    */
-  public void valorTotal() throws ClassNotFoundException, IOException{
-    articulos = eyl.leer();
+  public double valorTotal() throws ClassNotFoundException, IOException{
+    articulos = eyl.leerArticulos();
     double total = 0;
     for (int i = 0; i < articulos.size(); i++) {
       total += articulos.get(i).getExistencia()*articulos.get(i).getPrecio_compra();
     }
-    System.out.println("El valor de compra total de tus artículos es de: $" + total);
+    return total;
   }
   
   /**
@@ -317,69 +325,80 @@ public class Catalogo {
    * @throws ClassNotFoundException
    * @throws IOException 
    */
-  public void carrito() throws ClassNotFoundException, IOException{
-    articulos = eyl.leer();
+  
+  public void carrito() throws ClassNotFoundException, IOException {
+    articulos = eyl.leerArticulos();
     System.out.println("Lista de artículos: ");
-    eyl.mostrar();
-    int po = 0;
-    int clavecar = 0;
+    eyl.mostrarArticulos();
+    int clavecarr = 0;
     int cantidad = 0;
-    double[][] carrito = new double[50][4];
-    int filas = 0;
-    int colum = 0;
+    int op = 0;
     int cosas_en_carro = 0;
     boolean flag = false;
-    do{
+    double[][] carrito = new double[50][5];
+    
+    do {
       System.out.println("Ingrese la clave del artículo que desea agregar al carrito: ");
-      clavecar = tec.leerEntero();
+       clavecarr = tec.leerEntero();
       for (int i = 0; i < articulos.size(); i++) {
-        if (articulos.get(i).getClave() == clavecar) {
+        if(articulos.get(i).getClave() == clavecarr) {
           flag = true;
-          System.out.println("Ingrese la cantidad que desea agregar: ");
+          System.out.println("Ingrese la cantidad que desea agregar al carrito: ");
           cantidad = tec.leerEntero();
-          if(flag == true && cantidad <= articulos.get(i).getExistencia()){
-            carrito[filas][colum] = clavecar; //Fila de claves
-            carrito[filas][1] = cantidad; //Fila de cantidad vendida
-            carrito[filas][2] = articulos.get(i).getPrecio_iva(); //Fila del precio con IVA
-            carrito[filas][3] = articulos.get(i).getPrecio_venta() - //Fila del dinero ganado
-                articulos.get(i).getPrecio_compra();
+          if(cantidad <= articulos.get(i).getExistencia()) {
+            carrito[cosas_en_carro][0] = clavecarr; //Fila de claves
+            carrito[cosas_en_carro][1] = cantidad; //Fila de cantidad vendida
+            carrito[cosas_en_carro][2] = articulos.get(i).getPrecio_iva(); //Fila del precio con IVA
+            carrito[cosas_en_carro][3] = articulos.get(i).getPrecio_venta() - 
+                articulos.get(i).getPrecio_compra(); //Fila del dinero ganado
             cosas_en_carro++;
             int existencias_actuales = articulos.get(i).getExistencia();
-            existencias_actuales = existencias_actuales - cantidad;
+            existencias_actuales -= cantidad;
             articulos.get(i).setExistencia(existencias_actuales);
-            eyl.escribir(articulos);
+            eyl.escribirArticulos(articulos);
             System.out.println("¿Qué desea hacer?\n1.Agregar otro producto al carrito\n"
             + "2.Imprimir total de la compra");
-            po = tec.leerEntero();
-          } else {
-            System.out.println("No se tienen suficientes existencias");
-        }
+            op = tec.leerEntero();
+        } else {
+          System.out.println("No se tienen suficientes existencias de ese producto");
         }
       }
-      if(flag==false){
-        System.out.println("Artículo no encontrado");
       }
-    } while(po!=2);
+    if(flag == false) {
+      System.out.println("Artículo no encontrado");
+    }
+    } while(op!=2);
+    
+    carrito[0][4] = cosas_en_carro;
     
     double suma = 0;
     double ganado = 0;
     for (int i = 0; i < cosas_en_carro; i++) {
       suma += carrito[i][1]*carrito[i][2];
-    }
-    
-    for (int i = 0; i < cosas_en_carro; i++) {
       ganado += carrito[i][1]*carrito[i][3];
     }
     
-    File file2 = new File("FerreteriaGanancias.obj");
+    File file2 = new File("FacturasFerreteria.obj");
+    ArrayList<Factura> listaFacturas = new ArrayList();
+    Calendar calendario = GregorianCalendar.getInstance();
+    Date fecha = calendario.getTime();
+    SimpleDateFormat formatoDeFecha = new SimpleDateFormat("dd/MM/yyyy");
+    String fechaS = formatoDeFecha.format(fecha);
+        
     if(file2.exists()){
-      gananciasFerreteria = eyl.leerGanancias();
-      gananciasFerreteria += ganado;
-      eyl.guardarGanancias(gananciasFerreteria);
+      listaFacturas = eyl.leerFacturas();
+      Factura fac = new Factura(listaFacturas.get(listaFacturas.size()-1).getNumeroFactura() + 1,
+          fechaS, carrito, suma, ganado);
+      listaFacturas.add(fac);
+      eyl.escribirFacturas(listaFacturas);
     } else {
-      eyl.guardarGanancias(ganado);
+      Factura fac = new Factura(1, fechaS, carrito, suma, ganado);
+      listaFacturas.add(fac);
+      eyl.escribirFacturas(listaFacturas);
     }
-    System.out.println("Total de la compra: " + suma);
+    
+    System.out.println("Factura guardada");
+    
   }
   
   /**
@@ -389,7 +408,7 @@ public class Catalogo {
    * @throws IOException 
    */
   public int asignarClave() throws ClassNotFoundException, IOException{
-    articulos = eyl.leer();
+    articulos = eyl.leerArticulos();
     int maximo = articulos.get(0).getClave();
     for (int i = 0; i < articulos.size(); i++) {
       if(articulos.get(i).getClave()>maximo){
@@ -397,5 +416,174 @@ public class Catalogo {
       }
     }
     return maximo;
+  }
+  
+  /**
+   * Este método busca facturas de una fecha dada por el usuario
+   * @param busca fecha a buscar
+   * @throws IOException
+   * @throws ClassNotFoundException 
+   */
+  public void buscarFechaEspecifica(String busca) throws IOException, ClassNotFoundException{
+    boolean flag = false;
+    facturas = eyl.leerFacturas();
+    for (int i = 0; i < facturas.size(); i++) {
+      if(facturas.get(i).getFecha().equalsIgnoreCase(busca)) {
+        System.out.println("Resultados de la búsqueda: ");
+        System.out.println("Número de Factura: " + facturas.get(i).getNumeroFactura());
+        System.out.println("Fecha: " + facturas.get(i).getFecha());
+        double listaArticulos[][] = facturas.get(i).getListaArticulos();
+        for (int j = 0; j < listaArticulos[0][4]; j++) {
+          System.out.println("Clave artículo  ||  Cantidad  ||  Precio(con IVA)");
+          System.out.println(listaArticulos[j][0] + " || " + listaArticulos[j][1] + " || " +
+              listaArticulos[j][2]);
+        }
+        System.out.println("Total de la venta: " + facturas.get(i).getTotal());
+        System.out.println("-----------------------------------");
+      }
+    }
+    if (flag != true) {
+      System.out.println("No se encontró la factura");
+    }
+  }
+  
+  /**
+   * Este método busca un número de factura dado por el usuario
+   * @param numero número de factura dado por el usuario
+   * @throws IOException
+   * @throws ClassNotFoundException 
+   */
+  public void buscarNumeroFactura(int numero) throws IOException, ClassNotFoundException{
+    boolean flag = false;
+    facturas = eyl.leerFacturas();
+    for (int i = 0; i < facturas.size(); i++) {
+      if(facturas.get(i).getNumeroFactura() == numero) {
+        flag = true;
+        System.out.println("Resultados de la búsqueda: ");
+        System.out.println("Número de Factura: " + facturas.get(i).getNumeroFactura());
+        System.out.println("Fecha: " + facturas.get(i).getFecha());
+        double listaArticulos[][] = facturas.get(i).getListaArticulos();
+        for (int j = 0; j < listaArticulos[0][4]; j++) {
+          System.out.println("Clave artículo  ||  Cantidad  ||  Precio(con IVA)");
+          System.out.println(listaArticulos[j][0] + " || " + listaArticulos[j][1] + " || " +
+              listaArticulos[j][2]);
+        }
+        System.out.println("Total de la venta: " + facturas.get(i).getTotal());
+        System.out.println("-----------------------------------");
+      }
+    }
+    if (flag == false) {
+      System.out.println("No se encontró la factura");
+    }
+  }
+  
+  /**
+   * Este método busca facturas expedidas después de una fecha dada por el usuario
+   * @param fecha fecha en la que se basa la búsqueda
+   * @throws ParseException
+   * @throws IOException
+   * @throws ClassNotFoundException 
+   */
+  public void buscarDespuesDeFecha(String fecha) throws ParseException, IOException, 
+      ClassNotFoundException{
+    boolean flag = false;
+    SimpleDateFormat formatoDelTexto = new SimpleDateFormat("dd/MM/yyyy");
+    Date fechaB = formatoDelTexto.parse(fecha);
+      
+    facturas = eyl.leerFacturas();
+    for (int i = 0; i < facturas.size(); i++) {
+      Date fechaC = formatoDelTexto.parse(facturas.get(i).getFecha());
+      if(fechaC.after(fechaB)) {
+        flag = true;
+        System.out.println("Resultados de la búsqueda: ");
+        System.out.println("Número de Factura: " + facturas.get(i).getNumeroFactura());
+        System.out.println("Fecha: " + facturas.get(i).getFecha());
+        double listaArticulos[][] = facturas.get(i).getListaArticulos();
+        for (int j = 0; j < listaArticulos[0][4]; j++) {
+          System.out.println("Clave artículo  ||  Cantidad  ||  Precio(con IVA)");
+          System.out.println(listaArticulos[j][0] + " || " + listaArticulos[j][1] + " || " +
+              listaArticulos[j][2]);
+        }
+        System.out.println("Total de la venta: " + facturas.get(i).getTotal());
+        System.out.println("-----------------------------------");
+      }
+    }
+    if(flag == false) {
+      System.out.println("No hay facturas después de esa fecha");
+    }
+  }
+  
+  /**
+   * Este método busca facturas expedidas antes de una fecha ingresada por el usuario
+   * @param fecha fecha base de la búsqueda
+   * @throws ParseException
+   * @throws IOException
+   * @throws ClassNotFoundException 
+   */
+  public void buscarAntesDeFecha(String fecha) throws ParseException, IOException, 
+      ClassNotFoundException{
+    boolean flag = false;
+    SimpleDateFormat formatoDelTexto = new SimpleDateFormat("dd/MM/yyyy");
+    Date fechaB = formatoDelTexto.parse(fecha);
+      
+    facturas = eyl.leerFacturas();
+    for (int i = 0; i < facturas.size(); i++) {
+      Date fechaC = formatoDelTexto.parse(facturas.get(i).getFecha());
+      if(fechaC.before(fechaB)) {
+        flag = true;
+        System.out.println("Resultados de la búsqueda: ");
+        System.out.println("Número de Factura: " + facturas.get(i).getNumeroFactura());
+        System.out.println("Fecha: " + facturas.get(i).getFecha());
+        double listaArticulos[][] = facturas.get(i).getListaArticulos();
+        for (int j = 0; j < listaArticulos[0][4]; j++) {
+          System.out.println("Clave artículo  ||  Cantidad  ||  Precio(con IVA)");
+          System.out.println(listaArticulos[j][0] + " || " + listaArticulos[j][1] + " || " +
+              listaArticulos[j][2]);
+        }
+        System.out.println("Total de la venta: " + facturas.get(i).getTotal());
+        System.out.println("-----------------------------------");
+      }
+    }
+    if(flag == false) {
+      System.out.println("No hay facturas antes de esa fecha");
+    }
+  }
+  
+  /**
+   * Este método busca facturas expedidas en el intervalo de dos fechas dadas por el usuario
+   * @param fecha1 fecha anterior a las buscadas
+   * @param fecha2 fecha posterior a las buscadas
+   * @throws ParseException
+   * @throws IOException
+   * @throws ClassNotFoundException 
+   */
+  public void buscarEntreFechas(String fecha1, String fecha2) throws ParseException, IOException, 
+      ClassNotFoundException{
+    boolean flag = false;
+    SimpleDateFormat formatoDelTexto = new SimpleDateFormat("dd/MM/yyyy");
+    Date fechaB = formatoDelTexto.parse(fecha1);
+    Date fechaC = formatoDelTexto.parse(fecha2);
+      
+    facturas = eyl.leerFacturas();
+    for (int i = 0; i < facturas.size(); i++) {
+      Date fechaD = formatoDelTexto.parse(facturas.get(i).getFecha());
+      if(fechaD.after(fechaB) && fechaD.before(fechaC)) {
+        flag = true;
+        System.out.println("Resultados de la búsqueda: ");
+        System.out.println("Número de Factura: " + facturas.get(i).getNumeroFactura());
+        System.out.println("Fecha: " + facturas.get(i).getFecha());
+        double listaArticulos[][] = facturas.get(i).getListaArticulos();
+        for (int j = 0; j < listaArticulos[0][4]; j++) {
+          System.out.println("Clave artículo  ||  Cantidad  ||  Precio(con IVA)");
+          System.out.println(listaArticulos[j][0] + " || " + listaArticulos[j][1] + " || " +
+              listaArticulos[j][2]);
+        }
+        System.out.println("Total de la venta: " + facturas.get(i).getTotal());
+        System.out.println("-----------------------------------");
+      }
+    }
+    if(flag == false) {
+      System.out.println("No hay facturas entre esas fechas");
+    }
   }
 }

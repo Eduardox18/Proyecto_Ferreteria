@@ -2,6 +2,7 @@ package ferreteria;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 
 /**
  *
@@ -20,7 +21,9 @@ public class Menu {
     System.out.println("Menú de la Ferretería 'El clavo de oro'");
     System.out.println("1. Agregar producto\n2. Eliminar producto\n3. Editar producto\n4. Mostrar"
         + " todo el inventario\n5. Buscar producto\n6. Mostrar productos ordenados\n"
-        + "7. Valor total de productos\n8. Carrito\n9. Imprimir ganancias\n10. Salir");
+        + "7. Valor total de productos\n8. Carrito\n9. Imprimir facturas\n"
+        + "10. Imprimir ganancias\n11. Buscar factura por fecha\n12. Buscar factura por número\n"
+        + "13. Salir");
   }
 
   /**
@@ -40,7 +43,7 @@ public class Menu {
    * @throws IOException
    * @throws ClassNotFoundException
    */
-  public void realizarOpcion(int op) throws IOException, ClassNotFoundException {
+  public void realizarOpcion(int op) throws IOException, ClassNotFoundException, ParseException {
 
     EscrituraYLectura eyl = new EscrituraYLectura();
     int x;
@@ -60,7 +63,7 @@ public class Menu {
         catalogo.editarArticulo();
         break;
       case 4:
-        eyl.mostrar();
+        eyl.mostrarArticulos();
         break;
       case 5:
         System.out.println("Buscar producto por:\n1. Clave\n2. Nombre\n3. Descripción");
@@ -81,15 +84,31 @@ public class Menu {
         catalogo.carrito();
         break;
       case 9:
-        File file = new File("GananciasFerreteria.obj");
-        if(file.exists()){
+        eyl.mostrarFactura();
+        break;
+      case 10:
+        File fileFacturas = new File("FacturasFerreteria.obj");
+        if(fileFacturas.exists()){
           double ganancias = eyl.leerGanancias();
           System.out.println("Las ganancias generadas hasta el momento son de: $" + ganancias);
         } else {
           System.out.println("No hay ganancias hasta el momento, ¡ponte a vender!");
         }
         break;
-      case 10:
+      case 11:
+        System.out.println("Buscar factura en:\n1. Fecha específica\n2. Después de cierta fecha"
+            + "\n3. Antes de cierta fecha\n4. Entre un intervalor de fechas");
+        int op3 = tec.leerEntero();
+        tec.salto();
+        realizarSubmenuTres(op3);
+        break;
+      case 12:
+        System.out.println("Introduce el número de la factura: ");
+        tec.salto();
+        int buscaN = tec.leerEntero();
+        catalogo.buscarNumeroFactura(buscaN);
+        break;
+      case 13:
         System.out.println("¡Gracias por usar nuestro programa!");
         break;
       default:
@@ -143,6 +162,45 @@ public class Menu {
         break;
       case 3:
         catalogo.ordenarPrecioAscendente();
+        break;
+      default:
+        System.out.println("Valor fuera de rango");
+        break;
+    }
+  }
+  
+  /**
+   * Esta función es un auxiliar a la principal del menú, abarcando el submenú
+   * @param op
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws ParseException 
+   */
+  public void realizarSubmenuTres(int op) throws IOException, ClassNotFoundException, 
+      ParseException {
+    
+    switch (op) {
+      case 1:
+        System.out.println("Introduce la fecha (Usa el formato dd/MM/yyyy): ");
+        String buscaF = tec.leerString();
+        catalogo.buscarFechaEspecifica(buscaF);
+        break;
+      case 2:
+        System.out.println("Introduce la fecha (Usa el formato dd/MM/yyyy): ");
+        buscaF = tec.leerString();
+        catalogo.buscarDespuesDeFecha(buscaF);
+        break;
+      case 3:
+        System.out.println("Introduce la fecha (Usa el formato dd/MM/yyyy): ");
+        buscaF = tec.leerString();
+        catalogo.buscarAntesDeFecha(buscaF);
+        break;
+      case 4:
+        System.out.println("Introduce la primera fecha (Usa el formato dd/MM/yyyy): ");
+        String buscaF1 = tec.leerString();
+        System.out.println("Introduce la segunda fecha (Usa el formato dd/MM/yyyy): ");
+        String buscaF2 = tec.leerString();
+        catalogo.buscarEntreFechas(buscaF1, buscaF2);
         break;
       default:
         System.out.println("Valor fuera de rango");
